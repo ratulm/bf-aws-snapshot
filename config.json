@@ -1,0 +1,19 @@
+{
+  "commentRegions": "An explicit list of regions to cover; empty list means cover all regions",
+  "regions": [ 
+  ],
+  "commentVpcs": "An explicit list of VPC IDs to cover; empty list means means cover all VPCs",
+  "vpcIds": [
+  ],
+  "skipData": {
+    "ClassicLinkInstances": "No support",
+    "DhcpOptions": "No support",
+    "Hosts": "No support",
+    "InstanceStatuses": "Information available elsewhere",
+    "MovingAddressStatuses": "Unnecessary info",
+    "PlacementGroups": "No support",
+    "Tags": "Interfere with parsing because top-level key is Vpcs",
+    "VpcClassicLink": "Interfere with parsing because top-level key is Vpcs",
+    "VpcClassicLinkDnsSupport": "Interfere with parsing because top-level key is Vpcs"
+  }
+}
