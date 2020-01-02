@@ -2,6 +2,8 @@ Scripts to fetch AWS data and package it as a Batfish snapshot.
 
 ## Setup
 
+- Python3 
+
 - `pip install -r requirements.txt`
  
 - [Set up AWS credentials](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html) 
