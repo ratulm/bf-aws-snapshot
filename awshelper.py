@@ -4,6 +4,7 @@ _clients = {}
 _functions = {}
 _session = None
 
+
 # the last two keys should both be None or both be non-None
 def _get_client(client_type, region):
     if _session is None:
@@ -31,8 +32,57 @@ def aws_get_config(region):
             continue
         config[key] = response
         if key == "TransitGatewayRouteTables":
-            _aws_get_route_table_details(_clients[region], config, response["TransitGatewayRouteTables"])
+            _aws_get_route_table_details(_clients[region]["ec2"], config, response["TransitGatewayRouteTables"])
+        if key == "LoadBalancers":
+            _aws_get_load_balancer_details(_clients[region]["elbv2"], config, response["LoadBalancers"])
+        if key == "TargetGroups":
+            _aws_get_elbv2_target_health(_clients[region]["elbv2"], config, response["TargetGroups"])
     return config
+
+
+def _aws_get_load_balancer_details(client, config, load_balancers):
+    listeners = []
+    attributes = []
+    for load_balancer in load_balancers:
+        lb_arn = load_balancer["LoadBalancerArn"]
+        try:
+            response = _aws_response(client.describe_listeners, dict(LoadBalancerArn=lb_arn))
+            response["LoadBalancerArn"] = lb_arn
+            listeners.append(response)
+        except Exception as e:
+            print(
+                "Exception getting load balancer listeners for {} with arn {}: {}".format(
+                    load_balancer["LoadBalancerName"],
+                    lb_arn, e))
+
+    try:
+        response = _aws_response(client.describe_load_balancer_attributes, dict(LoadBalancerArn=lb_arn))
+        response["LoadBalancerArn"] = lb_arn
+        attributes.append(response)
+    except Exception as e:
+        print(
+            "Exception getting load balancer attributes for {} with arn {}: {}".format(
+                load_balancer["LoadBalancerName"],
+                lb_arn, e))
+
+    config["LoadBalancerListeners"] = {"LoadBalancerListeners": listeners}
+    config["LoadBalancerAttributes"] = {"LoadBalancerAttributes" : attributes}
+
+
+def _aws_get_elbv2_target_health(client, config, target_groups):
+    healths = []
+    for target_group in target_groups:
+        tg_arn = target_group["TargetGroupArn"]
+        try:
+            response = _aws_response(client.describe_target_health, dict(TargetGroupArn=tg_arn))
+            response["TargetGroupArn"] = tg_arn
+            healths.append(response)
+        except Exception as e:
+            print(
+                "Exception getting target health for target group {} with Arn {}: {}".format(
+                    target_group["TargetGroupName"], tg_arn, e))
+
+    config["LoadBalancerTargetHealth"] = {"LoadBalancerTargetHealth": healths}
 
 
 def _aws_get_route_table_details(client, config, route_tables):
@@ -88,8 +138,10 @@ def aws_init(regions=None, vpc_ids=None, skip_data=None, profile=None):
         attachment_vpc_filter = [{'Name': "attachment.vpc-id", 'Values': vpc_ids}]
 
     for region in regions_to_get:
+        _clients[region] = {}
+
         ec2_client = _get_client("ec2", region)
-        _clients[region] = ec2_client
+        _clients[region]["ec2"] = ec2_client
 
         _functions[region] = {}
         _functions[region]["Addresses"] = (ec2_client.describe_addresses, dict())
@@ -116,7 +168,7 @@ def aws_init(regions=None, vpc_ids=None, skip_data=None, profile=None):
         _functions[region]["TransitGatewayAttachments"] = (ec2_client.describe_transit_gateway_attachments, dict())
         _functions[region]["TransitGatewayRouteTables"] = (ec2_client.describe_transit_gateway_route_tables, dict())
         _functions[region]["TransitGatewayVpcAttachments"] = (
-        ec2_client.describe_transit_gateway_vpc_attachments, dict(Filters=vpc_filter))
+            ec2_client.describe_transit_gateway_vpc_attachments, dict(Filters=vpc_filter))
         _functions[region]["TransitGateways"] = (ec2_client.describe_transit_gateways, dict())
         _functions[region]["VpcEndpoints"] = (ec2_client.describe_vpc_endpoints, dict(Filters=vpc_filter))
         _functions[region]["VpcPeeringConnections"] = (ec2_client.describe_vpc_peering_connections, dict())
@@ -129,13 +181,20 @@ def aws_init(regions=None, vpc_ids=None, skip_data=None, profile=None):
 
         # get all elasticsearch domain names for this account (VPC based filtering is not supported yet)
         es_client = _get_client('es', region)
+        _clients[region]["es"] = es_client
         domain_names = es_client.list_domain_names()
         _functions[region]["ElasticsearchDomains"] = (es_client.describe_elasticsearch_domains, dict(
             DomainNames=[domainEntry["DomainName"] for domainEntry in domain_names["DomainNames"]]))
 
         # get all RDS instances (VPC based filtering is not supported yet)
         rds_client = _get_client('rds', region)
+        _clients[region]["rds"] = rds_client
         _functions[region]["RdsInstances"] = (rds_client.describe_db_instances, dict())
+
+        elbv2_client = _get_client('elbv2', region)
+        _clients[region]["elbv2"] = elbv2_client
+        _functions[region]["LoadBalancers"] = (elbv2_client.describe_load_balancers, dict())
+        _functions[region]["TargetGroups"] = (elbv2_client.describe_target_groups, dict())
 
         if skip_data is not None:
             for key in skip_data:
