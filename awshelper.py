@@ -40,6 +40,9 @@ def aws_get_config(region):
     return config
 
 
+import json
+
+
 def _aws_get_load_balancer_details(client, config, load_balancers):
     listeners = []
     attributes = []
@@ -55,15 +58,15 @@ def _aws_get_load_balancer_details(client, config, load_balancers):
                     load_balancer["LoadBalancerName"],
                     lb_arn, e))
 
-    try:
-        response = _aws_response(client.describe_load_balancer_attributes, dict(LoadBalancerArn=lb_arn))
-        response["LoadBalancerArn"] = lb_arn
-        attributes.append(response)
-    except Exception as e:
-        print(
-            "Exception getting load balancer attributes for {} with arn {}: {}".format(
-                load_balancer["LoadBalancerName"],
-                lb_arn, e))
+        try:
+            response = _aws_response(client.describe_load_balancer_attributes, dict(LoadBalancerArn=lb_arn))
+            response["LoadBalancerArn"] = lb_arn
+            attributes.append(response)
+        except Exception as e:
+            print(
+                "Exception getting load balancer attributes for {} with arn {}: {}".format(
+                    load_balancer["LoadBalancerName"],
+                    lb_arn, e))
 
     config["LoadBalancerListeners"] = {"LoadBalancerListeners": listeners}
     config["LoadBalancerAttributes"] = {"LoadBalancerAttributes" : attributes}
