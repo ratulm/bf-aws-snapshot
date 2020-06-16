@@ -178,7 +178,6 @@ def aws_init(regions=None, vpc_ids=None, skip_data=None, profile=None):
         _functions[region]["Vpcs"] = (ec2_client.describe_vpcs, dict(Filters=vpc_filter))
         _functions[region]["VpcClassicLink"] = (ec2_client.describe_vpc_classic_link, dict())
         _functions[region]["VpcClassicLinkDnsSupport"] = (ec2_client.describe_vpc_classic_link_dns_support, dict())
-        _functions[region]["VpcEndpointServices"] = (ec2_client.describe_vpc_endpoint_services, dict())
         _functions[region]["VpnConnections"] = (ec2_client.describe_vpn_connections, dict())
         _functions[region]["VpnGateways"] = (ec2_client.describe_vpn_gateways, dict(Filters=attachment_vpc_filter))
 
