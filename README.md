@@ -18,3 +18,13 @@ Scripts to fetch AWS data and package it as a Batfish snapshot.
     The command reads its config data from `config.json`. You may supply a different file using the `-c` option. You may change the contents of this file to control which regions and VPCs the data is fetched from. Unless you know what you are doing, do not mess with the `skipData` configuration.  
 
     The command used the default AWS profile by default. To use a different (configured) profile, use the `-p` option.
+
+  - Merging data of multiple accounts
+
+    First, fetch AWS data from multiple accounts (for example using different profiles) like above. This would result in multiple snapshot directories
+    (rename the `aws-snapshot` output per run to something more descriptive of the account).
+
+    Then run `./merge-aws-jsons.sh <out_dir>` which will find all these directories and merge their JSON content under the single output directory.
+    This can then be loaded into Batfish.
+
+    Note: it is assumed the snapshots contain distinct data. The script just dumbly merges the top-level key contents, without any effort to deduplicate.
